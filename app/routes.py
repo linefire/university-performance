@@ -22,7 +22,7 @@ def start(bot_token: str):
 
 @app.route('/webhook/<bot_token>', methods=['POST'])
 def webhook(bot_token):
-    text = request.json['text']
+    text = request.json['message']['text']
     if text == '/start':
         start(bot_token)
     return ''
