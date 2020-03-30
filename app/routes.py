@@ -7,9 +7,9 @@ from app import app
 from app.telegram import send_message
 
 
-def start(bot_token: str, data: dict):
+def start(bot_token: str):
     if bot_token == environ['TELEGRAM_TOKEN']:
-        chat_id = data['message']['chat']['id']
+        chat_id = request.json['message']['chat']['id']
         send_message(
             bot_token,
             chat_id,
@@ -22,8 +22,7 @@ def start(bot_token: str, data: dict):
 
 @app.route('/webhook/<bot_token>', methods=['POST'])
 def webhook(bot_token):
-    data = loads(request.json)
-    text = data['text']
+    text = request.json['text']
     if text == '/start':
-        start(bot_token, data)
+        start(bot_token)
     return ''
