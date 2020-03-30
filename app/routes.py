@@ -7,3 +7,4 @@ from app import app
 def webhook(bot_token):
     print(str(request))
     print(bot_token, request.json)
+    return ''
