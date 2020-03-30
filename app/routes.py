@@ -25,5 +25,5 @@ def webhook(bot_token):
     data = loads(request.json)
     text = data['text']
     if text == '/start':
-        start(bot_token)
+        start(bot_token, data)
     return ''
