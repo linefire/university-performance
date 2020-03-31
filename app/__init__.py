@@ -16,8 +16,8 @@ migrate = Migrate(app, db)
 manager = Manager(app)
 manager.add_command('db', MigrateCommand)
 
-from . import routes
 from . import model
+from . import routes
 
 if __name__ == "__main__":
     manager.run()
