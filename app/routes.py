@@ -5,7 +5,7 @@ from re import match
 from flask import request
 
 from app import app, db
-from app.model import ChildBot
+from .model import ChildBot
 from app.telegram import send_message, check_bot_token, set_up_webhook
 
 
