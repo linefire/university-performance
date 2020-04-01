@@ -5,8 +5,6 @@ from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
 from flask_sqlalchemy import SQLAlchemy
 
-from app.telegram import set_up_webhooks
-
 TELEGRAM_TOKEN = environ['TELEGRAM_TOKEN']
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = environ['DATABASE_URL']
@@ -22,4 +20,5 @@ from . import routes
 if __name__ == "__main__":
     manager.run()
 else:
+    from app.telegram import set_up_webhooks
     set_up_webhooks()

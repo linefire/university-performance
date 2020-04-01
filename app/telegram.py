@@ -5,7 +5,7 @@ from threading import Lock
 
 from requests import post
 
-from .model import ChildBot
+from app.model import ChildBot
 
 
 def _limit_calls_per_second(count: int):
