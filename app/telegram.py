@@ -2,10 +2,12 @@ import time
 from json import loads
 from os import environ
 from threading import Lock
+from typing import List, Dict
 
 from requests import post
 
-from app.model import ChildBot
+from app import db
+from app.model import ChildBot, Menu, User
 
 
 def _limit_calls_per_second(count: int):
@@ -33,10 +35,14 @@ def _limit_calls_per_second(count: int):
 
 
 @_limit_calls_per_second(30)
-def _send_message(bot_token: str, command: str, data: dict = None) -> dict:
+def _send_message(bot_token: str,
+                  command: str, data: dict = None) -> dict:
     if data is None:
         data = {}
-    response = post(f'https://api.telegram.org/bot{bot_token}/{command}', data)
+    response = post(
+        f'https://api.telegram.org/bot{bot_token}/{command}',
+        data,
+    )
     return loads(response.text)
 
 
@@ -46,14 +52,75 @@ def set_up_webhook(bot_token: str):
     _send_message(bot_token, 'setWebhook', {'url': hook_url})
 
 
-def send_message(bot_token: str, chat_id: int, text: str):
-    _send_message(bot_token, 'sendMessage', {
-        'chat_id': chat_id,
-        'text': text,
-    })
+def _get_menu(bot_token: str,
+              user_id: int) -> List[List[Dict[str, str]]]:
+    reply_markup = []
+
+    bot = ChildBot.query.filter(
+        ChildBot.token == bot_token,
+    ).first()
+
+    if not bot:
+        return reply_markup
+
+    user = User.query.filter(
+        User.tg_id == user_id,
+        User.bot_id == bot.id,
+    ).first()
+
+    if not user:
+        user = User()
+        user.tg_id = user_id,
+        user.bot_id = bot.id,
+
+        menu = Menu.query.filter(
+            Menu.bot_id == bot.id,
+            Menu.name == 'start_menu',
+        ).first()
+
+        if not menu:
+            menu = Menu()
+            menu.bot_id = bot.id
+            menu.name = 'start_menu'
+
+            db.session.add(menu)
+            db.session.flush()
+            db.session.refresh(menu)
+
+        user.menu = menu.id
+
+        db.session.add(user)
+        db.session.commit()
+
+    menu = Menu.query.get(user.menu)
+
+    for button in menu.buttons:
+        reply_markup.append([{'text': button.text}])
+
+    is_admin = bot.admin == user.tg_id
+
+    if is_admin:
+        reply_markup.append([{'text': 'Настройки'}])
+
+    return reply_markup
 
 
-def check_bot_token(bot_token: str):
+def send_message(bot_token: str, chat_id: int,
+                 text: str = None, user_id: int = None):
+    data = {'chat_id': chat_id}
+
+    if text is not None:
+        data['text'] = text
+
+    if user_id:
+        keyboard = _get_menu(bot_token, user_id)
+        if keyboard:
+            data['reply_markup'] = {'keyboard': keyboard}
+
+    _send_message(bot_token, 'sendMessage', data)
+
+
+def check_bot_token(bot_token: str) -> bool:
     response = _send_message(bot_token, 'getMe')
     return response['ok']
 

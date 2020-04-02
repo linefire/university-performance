@@ -54,11 +54,8 @@ def webhook(bot_token: str):
             get_control_bot(text)
     else:
         if text == '/start':
-            pass
-        else:
             send_message(
                 bot_token,
                 request.json['message']['chat']['id'],
-                text,
             )
     return ''
