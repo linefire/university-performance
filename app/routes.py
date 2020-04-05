@@ -6,7 +6,7 @@ from flask import request
 from sqlalchemy.exc import IntegrityError
 
 from app import app, db
-from app.model import ChildBot
+from app.model import ChildBot, User
 from app.telegram import send_message, check_bot_token, set_up_webhook
 
 
@@ -53,6 +53,22 @@ def start_admin(bot_token: str):
     )
 
 
+def check_access_settings(bot_token: str) -> bool:
+    user_id = request.json['message']['from']['id']
+    bot = ChildBot.query.filter(ChildBot.token == bot_token).first()
+    if bot.admin != user_id:
+        return False
+
+    user = User.query.filter(
+        User.tg_id == user_id,
+        User.bot_id == bot.id,
+    ).first()
+    if user.menu != 'start_menu':
+        return False
+
+    return True
+
+
 @app.route('/webhook/<bot_token>', methods=['POST'])
 def webhook(bot_token: str):
     text = request.json['message']['text']
@@ -68,4 +84,7 @@ def webhook(bot_token: str):
                 request.json['message']['chat']['id'],
                 user_id=request.json['message']['from']['id'],
             )
+        elif text == 'Настройки':
+            if check_access_settings(bot_token):
+                pass
     return ''

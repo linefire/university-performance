@@ -4,6 +4,7 @@ from os import environ
 from threading import Lock
 from typing import List, Dict, Tuple
 
+from flask import request
 from requests import post
 
 from app import db
@@ -130,6 +131,30 @@ def send_message(bot_token: str, chat_id: int,
 
     if data.get('text'):
         _send_message(bot_token, 'sendMessage', data)
+
+
+def send_settings_menu(bot_token: str, chat_id: int):
+    data = {
+        'chat_id': chat_id,
+        'text': 'Ваши настройки',
+        'reply_markup': dumps({
+            'keyboard': [
+                [{'text': 'Редактор меню'}],
+                [{'text': 'Редактор действий'}],
+                [{'text': 'Назад'}],
+            ]
+        })
+    }
+
+    response = _send_message(bot_token, 'sendMessage', data)
+    if response['ok']:
+        user = User.query.filter(
+            User.bot_id == ChildBot.query.filter(
+                ChildBot.token == bot_token).first().id,
+            User.tg_id == request.json['message']['from']['id'],
+        ).first()
+        user.menu = 'settings'
+        db.session.commit()
 
 
 def check_bot_token(bot_token: str) -> bool:
