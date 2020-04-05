@@ -138,6 +138,7 @@ def send_settings_menu(bot_token: str, chat_id: int):
         'chat_id': chat_id,
         'text': 'Ваши настройки',
         'reply_markup': dumps({
+            'resize_keyboard': True,
             'keyboard': [
                 [{'text': 'Редактор меню'}],
                 [{'text': 'Редактор действий'}],
