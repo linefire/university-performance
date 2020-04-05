@@ -122,6 +122,8 @@ def send_message(bot_token: str, chat_id: int,
         if not data.get('text'):
             data['text'] = menu_desc
 
+    print(data)
+
     if data.get('text'):
         _send_message(bot_token, 'sendMessage', data)
 
