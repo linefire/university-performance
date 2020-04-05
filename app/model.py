@@ -15,7 +15,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tg_id = db.Column(db.Integer)
     bot_id = db.Column(db.Integer, db.ForeignKey('child_bots.id'))
-    menu = db.Column(db.Integer)
+    menu = db.Column(db.String)
 
 
 class Menu(db.Model):
