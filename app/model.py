@@ -24,6 +24,7 @@ class Menu(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     bot_id = db.Column(db.Integer, db.ForeignKey('child_bots.id'))
     name = db.Column(db.String)
+    description = db.Column(db.String)
     buttons = db.relationship('Button', backref='menus')
 
 

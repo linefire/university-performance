@@ -1,8 +1,7 @@
 import time
-from json import loads
 from os import environ
 from threading import Lock
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 from requests import post
 
@@ -43,8 +42,10 @@ def _send_message(bot_token: str,
         f'https://api.telegram.org/bot{bot_token}/{command}',
         data,
     )
-    print(response.text)  # Debug
-    return loads(response.text)
+    data = response.json()
+    if not data['ok']:
+        print(data)
+    return data
 
 
 def set_up_webhook(bot_token: str):
@@ -54,7 +55,7 @@ def set_up_webhook(bot_token: str):
 
 
 def _get_menu(bot_token: str,
-              user_id: int) -> List[List[Dict[str, str]]]:
+              user_id: int) -> Tuple[str, List[List[Dict[str, str]]]]:
     reply_markup = []
 
     bot = ChildBot.query.filter(
@@ -62,7 +63,7 @@ def _get_menu(bot_token: str,
     ).first()
 
     if not bot:
-        return reply_markup
+        return '', reply_markup
 
     user = User.query.filter(
         User.tg_id == user_id,
@@ -83,6 +84,7 @@ def _get_menu(bot_token: str,
             menu = Menu()
             menu.bot_id = bot.id
             menu.name = 'start_menu'
+            menu.description = 'Главное меню'
 
             db.session.add(menu)
             db.session.flush()
@@ -103,7 +105,7 @@ def _get_menu(bot_token: str,
     if is_admin:
         reply_markup.append([{'text': 'Настройки'}])
 
-    return reply_markup
+    return menu.description, reply_markup
 
 
 def send_message(bot_token: str, chat_id: int,
@@ -114,11 +116,14 @@ def send_message(bot_token: str, chat_id: int,
         data['text'] = text
 
     if user_id:
-        keyboard = _get_menu(bot_token, user_id)
+        menu_desc, keyboard = _get_menu(bot_token, user_id)
         if keyboard:
             data['reply_markup'] = {'keyboard': keyboard}
+        if not data.get('text'):
+            data['text'] = menu_desc
 
-    _send_message(bot_token, 'sendMessage', data)
+    if data.get('text'):
+        _send_message(bot_token, 'sendMessage', data)
 
 
 def check_bot_token(bot_token: str) -> bool:
