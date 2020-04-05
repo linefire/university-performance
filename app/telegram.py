@@ -119,7 +119,10 @@ def send_message(bot_token: str, chat_id: int,
     if user_id:
         menu_desc, keyboard = _get_menu(bot_token, user_id)
         if keyboard:
-            data['reply_markup'] = dumps({'keyboard': keyboard})
+            data['reply_markup'] = dumps({
+                'keyboard': keyboard,
+                'resize_keyboard': True,
+            })
         if not data.get('text'):
             data['text'] = menu_desc
 
