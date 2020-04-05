@@ -43,6 +43,7 @@ def _send_message(bot_token: str,
         f'https://api.telegram.org/bot{bot_token}/{command}',
         data,
     )
+    print(response.text)  # Debug
     return loads(response.text)
 
 
