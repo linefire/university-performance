@@ -3,6 +3,7 @@ from os import environ
 from re import match
 
 from flask import request
+from sqlalchemy.exc import IntegrityError
 
 from app import app, db
 from app.model import ChildBot
@@ -14,16 +15,24 @@ def get_control_bot(bot_token: str):
     child_bot.admin = request.json['message']['from']['id']
     child_bot.token = bot_token
     db.session.add(child_bot)
-    db.session.commit()
+    try:
+        db.session.commit()
 
-    set_up_webhook(bot_token)
+        set_up_webhook(bot_token)
 
-    chat_id = request.json['message']['chat']['id']
-    send_message(
-        environ['TELEGRAM_TOKEN'],
-        chat_id,
-        'Теперь мы управляем Вашим ботом',
-    )
+        chat_id = request.json['message']['chat']['id']
+        send_message(
+            environ['TELEGRAM_TOKEN'],
+            chat_id,
+            'Теперь мы управляем Вашим ботом',
+        )
+    except IntegrityError:
+        chat_id = request.json['message']['chat']['id']
+        send_message(
+            environ['TELEGRAM_TOKEN'],
+            chat_id,
+            'Мы уже управляем Вашим ботом',
+        )
 
 
 def check_token(text: str) -> bool:
