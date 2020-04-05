@@ -66,5 +66,6 @@ def webhook(bot_token: str):
             send_message(
                 bot_token,
                 request.json['message']['chat']['id'],
+                request.json['message']['from']['id'],
             )
     return ''
