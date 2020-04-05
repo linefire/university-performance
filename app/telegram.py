@@ -1,4 +1,5 @@
 import time
+from json import dumps
 from os import environ
 from threading import Lock
 from typing import List, Dict, Tuple
@@ -90,7 +91,7 @@ def _get_menu(bot_token: str,
             db.session.flush()
             db.session.refresh(menu)
 
-        user.menu = menu.id
+        user.menu = menu.name
 
         db.session.add(user)
         db.session.commit()
@@ -118,7 +119,7 @@ def send_message(bot_token: str, chat_id: int,
     if user_id:
         menu_desc, keyboard = _get_menu(bot_token, user_id)
         if keyboard:
-            data['reply_markup'] = {'keyboard': keyboard}
+            data['reply_markup'] = dumps({'keyboard': keyboard})
         if not data.get('text'):
             data['text'] = menu_desc
 
