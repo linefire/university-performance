@@ -151,6 +151,7 @@ def send_settings_menu(bot_token: str, chat_id: int):
     }
 
     response = _send_message(bot_token, 'sendMessage', data)
+    print(response)
     if response['ok']:
         user = User.query.filter(
             User.bot_id == ChildBot.query.filter(
