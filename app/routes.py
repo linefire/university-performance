@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import app, db
 from app.model import ChildBot, User
-from app.telegram import send_message, check_bot_token, set_up_webhook, send_settings_menu
+from app.telegram import send_message, check_bot_token, set_up_webhook, send_settings_menu, send_previous_menu
 
 
 def get_control_bot(bot_token: str):
@@ -88,4 +88,10 @@ def webhook(bot_token: str):
         elif text == 'Настройки':
             if check_access_settings(bot_token):
                 send_settings_menu(bot_token, request.json['message']['chat']['id'])
+        elif text == 'Назад':
+            send_previous_menu(
+                bot_token,
+                request.json['message']['chat']['id'],
+                request.json['message']['from']['id'],
+            )
     return ''

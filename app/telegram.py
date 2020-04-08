@@ -154,8 +154,22 @@ def send_settings_menu(bot_token: str, chat_id: int):
                 ChildBot.token == bot_token).first().id,
             User.tg_id == request.json['message']['from']['id'],
         ).first()
-        user.menu = 'settings'
+        user.menu += '/settings'
         db.session.commit()
+
+
+def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
+    user = User.query.filter(
+        User.tg_id == user_id,
+        User.bot_id == ChildBot.query.filter(ChildBot.token == bot_token).first().id,
+    ).first()
+
+    user_path = user.menu.split('/')
+    user.menu = '/'.join(user_path[:-1])
+    if user_path[-2] == 'start_menu':
+        send_message(bot_token, chat_id, user_id=user_id)
+    elif user_path[-2] == 'settings':
+        send_settings_menu(bot_token, chat_id)
 
 
 def check_bot_token(bot_token: str) -> bool:
