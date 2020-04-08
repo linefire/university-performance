@@ -98,7 +98,8 @@ def _get_menu(bot_token: str,
         db.session.commit()
 
     menu = Menu.query.filter(
-        Menu.name == user.menu[-1],
+        Menu.bot_id == bot.id,
+        Menu.name == user.menu.split('/')[-1],
     ).first()
 
     for button in menu.buttons:
