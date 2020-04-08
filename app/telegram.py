@@ -97,7 +97,9 @@ def _get_menu(bot_token: str,
         db.session.add(user)
         db.session.commit()
 
-    menu = Menu.query.get(user.menu)
+    menu = Menu.query.filter(
+        Menu.name == user.menu[-1],
+    ).first()
 
     for button in menu.buttons:
         reply_markup.append([{'text': button.text}])
