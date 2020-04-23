@@ -33,6 +33,7 @@ def get_control_bot(bot_token: str):
             chat_id,
             'Мы уже управляем Вашим ботом',
         )
+        db.session.rollback()
 
 
 def check_token(text: str) -> bool:
@@ -55,14 +56,11 @@ def start_admin(bot_token: str):
 
 def check_access_settings(bot_token: str) -> bool:
     user_id = request.json['message']['from']['id']
-    bot = ChildBot.query.filter(ChildBot.token == bot_token).first()
+    bot = ChildBot.get_by_token(bot_token)
     if bot.admin != user_id:
         return False
 
-    user = User.query.filter(
-        User.tg_id == user_id,
-        User.bot_id == bot.id,
-    ).first()
+    user = User.get_user(bot.id, user_id)
     if user.menu != 'start_menu':
         return False
 

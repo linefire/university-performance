@@ -60,27 +60,19 @@ def _get_menu(bot_token: str,
               user_id: int) -> Tuple[str, List[List[Dict[str, str]]]]:
     reply_markup = []
 
-    bot = ChildBot.query.filter(
-        ChildBot.token == bot_token,
-    ).first()
+    bot = ChildBot.get_by_token(bot_token)
 
     if not bot:
         return '', reply_markup
 
-    user = User.query.filter(
-        User.tg_id == user_id,
-        User.bot_id == bot.id,
-    ).first()
+    user = User.get_user(bot.id, user_id)
 
     if not user:
         user = User()
         user.tg_id = user_id,
         user.bot_id = bot.id,
 
-        menu = Menu.query.filter(
-            Menu.bot_id == bot.id,
-            Menu.name == 'start_menu',
-        ).first()
+        menu = Menu.get_menu(bot.id, 'start_menu')
 
         if not menu:
             menu = Menu()
@@ -97,10 +89,7 @@ def _get_menu(bot_token: str,
         db.session.add(user)
         db.session.commit()
 
-    menu = Menu.query.filter(
-        Menu.bot_id == bot.id,
-        Menu.name == user.menu.split('/')[-1],
-    ).first()
+    menu = Menu.get_menu(bot.id, user.menu.split('/')[-1])
 
     for button in menu.buttons:
         reply_markup.append([{'text': button.text}])
@@ -153,20 +142,16 @@ def send_settings_menu(bot_token: str, chat_id: int):
     response = _send_message(bot_token, 'sendMessage', data)
     print(response)
     if response['ok']:
-        user = User.query.filter(
-            User.bot_id == ChildBot.query.filter(
-                ChildBot.token == bot_token).first().id,
-            User.tg_id == request.json['message']['from']['id'],
-        ).first()
+        user = User.get_user(
+            bot_token,
+            request.json['message']['from']['id'],
+        )
         user.menu += '/settings'
         db.session.commit()
 
 
 def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
-    user = User.query.filter(
-        User.tg_id == user_id,
-        User.bot_id == ChildBot.query.filter(ChildBot.token == bot_token).first().id,
-    ).first()
+    user = User.get_user(bot_token, user_id)
 
     user_path = user.menu.split('/')
     user.menu = '/'.join(user_path[:-1])
