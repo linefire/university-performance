@@ -8,6 +8,7 @@ from app import app
 from app import db
 from app.model import ChildBot
 from app.model import User
+from app.telegram import add_menu
 from app.telegram import send_add_menu_menu
 from app.telegram import send_menu_settings
 from app.telegram import send_message
@@ -80,6 +81,7 @@ def webhook(bot_token: str):
     text = request.json['message']['text']
     chat_id = request.json['message']['chat']['id']
     user_id = request.json['message']['from']['id']
+    user = User.get_user(bot_token, user_id)
     if bot_token == environ['TELEGRAM_TOKEN']:
         if text == '/start':
             start_admin(bot_token)
@@ -95,6 +97,8 @@ def webhook(bot_token: str):
             send_menu_settings(bot_token, chat_id, user_id)
         elif text == 'Добавить меню':
             send_add_menu_menu(bot_token, chat_id, user_id)
+        elif user.menu_path == '_start_menu/_settings/_menus/_add_menu':
+            add_menu(bot_token, chat_id, user_id, text)
         elif text == 'Назад':
             send_previous_menu(bot_token, chat_id, user_id)
     return ''
