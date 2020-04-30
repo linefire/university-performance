@@ -83,6 +83,7 @@ def webhook(bot_token: str):
     chat_id = request.json['message']['chat']['id']
     user_id = request.json['message']['from']['id']
     user = User.get_user(bot_token, user_id)
+    print(user.menu_path)
     if bot_token == environ['TELEGRAM_TOKEN']:
         if text == '/start':
             start_admin(bot_token)

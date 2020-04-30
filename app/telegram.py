@@ -337,7 +337,7 @@ def send_edit_menu(bot_token: str, chat_id: int, user_id: int, text: str):
         return
 
     user = User.get_user(bot.id, user_id)
-    if not user.menu_path == '_start_menu/_settings/_menus':
+    if user.menu_path != '_start_menu/_settings/_menus':
         return
 
     menu_name = text.split()[1]
