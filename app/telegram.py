@@ -85,7 +85,7 @@ def _get_reply_markup(bot_token: str, menu_path: str,
     for button in menu.buttons:
         keyboard.append([{'text': button.text}])
 
-    if menu_path == 'start_menu':
+    if menu_path == '_start_menu':
         if is_admin:
             keyboard.append([{'text': 'Настройки'}])
     else:
@@ -138,11 +138,13 @@ def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
             'reply_markup': _get_menu_settings_reply_markup(bot_token),
         })
     else:
-        desc, reply = _get_reply_markup(bot_token, user.menu_path)
+        desc, reply = _get_reply_markup(bot_token, user.menu_path,
+                                        ChildBot.get_by_token(
+                                            bot_token).admin == user_id)
         response = _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': desc,
-            'reply_markup': reply
+            'reply_markup': reply,
         })
 
     if response['ok']:
