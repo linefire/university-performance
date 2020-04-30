@@ -187,6 +187,7 @@ def button_click(bot_token: str, chat_id: int, user_id: int, text: str):
         Button.text == text,
     ).first()
     print(user)
+    print(button)
     if not button:
         return
 
