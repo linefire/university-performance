@@ -659,3 +659,10 @@ def start_action(bot_token: str, chat_id: int, action_name: str):
             'chat_id': chat_id,
             'text': action.text,
         })
+
+
+def send_message(bot_token: str, chat_id: int, text: str):
+    _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': text,
+    })

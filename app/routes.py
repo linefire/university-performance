@@ -7,7 +7,8 @@ from sqlalchemy.exc import IntegrityError
 
 from app import app, db
 from app.model import ChildBot, User
-from app.telegram import send_message, check_bot_token, set_up_webhook, send_settings_menu, send_previous_menu
+from app.telegram import check_bot_token, set_up_webhook, send_settings_menu, send_previous_menu
+from app.telegram import send_start_message
 
 
 def get_control_bot(bot_token: str):
@@ -54,8 +55,7 @@ def start_admin(bot_token: str):
     )
 
 
-def check_access_settings(bot_token: str) -> bool:
-    user_id = request.json['message']['from']['id']
+def check_access_settings(bot_token: str, user_id: int) -> bool:
     bot = ChildBot.get_by_token(bot_token)
     if bot.admin != user_id:
         return False
@@ -71,6 +71,8 @@ def check_access_settings(bot_token: str) -> bool:
 def webhook(bot_token: str):
     print(request.json)
     text = request.json['message']['text']
+    chat_id = request.json['message']['chat']['id']
+    user_id = request.json['message']['from']['id']
     if bot_token == environ['TELEGRAM_TOKEN']:
         if text == '/start':
             start_admin(bot_token)
@@ -78,18 +80,10 @@ def webhook(bot_token: str):
             get_control_bot(text)
     else:
         if text == '/start':
-            send_message(
-                bot_token,
-                request.json['message']['chat']['id'],
-                user_id=request.json['message']['from']['id'],
-            )
+            send_start_message(bot_token, chat_id, user_id)
         elif text == 'Настройки':
-            if check_access_settings(bot_token):
-                send_settings_menu(bot_token, request.json['message']['chat']['id'])
+            if check_access_settings(bot_token, user_id):
+                send_settings_menu(bot_token, chat_id, user_id)
         elif text == 'Назад':
-            send_previous_menu(
-                bot_token,
-                request.json['message']['chat']['id'],
-                request.json['message']['from']['id'],
-            )
+            send_previous_menu(bot_token, chat_id, user_id)
     return ''
