@@ -113,7 +113,7 @@ def webhook(bot_token: str):
                 text == 'Добавить кнопку':
             send_add_button_menu(bot_token, chat_id, user_id)
         elif user.menu_path.startswith('_start_menu/_settings/_menus/') and \
-                user.menu_path.split('/')[-1] == 'add_button':
+                user.menu_path.split('/')[-1] == '_add_button':
             add_button(bot_token, chat_id, user_id, text)
 
     return ''
