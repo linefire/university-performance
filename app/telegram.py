@@ -159,14 +159,7 @@ def _get_settings_reply_markup() -> dict:
 
 
 def send_settings_menu(bot_token: str, chat_id: int, user_id: int):
-    bot = ChildBot.get_by_token(bot_token)
-    if bot.admin != user_id:
-        return
-
-    user = User.get_user(bot.id, user_id)
-    if '/' in user.menu_path:
-        return
-
+    user = User.get_user(bot_token, user_id)
     user.menu_path += '/settings'
 
     response = _send_message(bot_token, 'sendMessage', {
