@@ -1,13 +1,18 @@
-from json import loads
 from os import environ
 from re import match
 
 from flask import request
 from sqlalchemy.exc import IntegrityError
 
-from app import app, db
-from app.model import ChildBot, User
-from app.telegram import check_bot_token, set_up_webhook, send_settings_menu, send_previous_menu
+from app import app
+from app import db
+from app.model import ChildBot
+from app.model import User
+from app.telegram import send_message
+from app.telegram import check_bot_token
+from app.telegram import set_up_webhook
+from app.telegram import send_settings_menu
+from app.telegram import send_previous_menu
 from app.telegram import send_start_message
 
 
