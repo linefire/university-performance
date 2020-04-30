@@ -124,6 +124,7 @@ def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
         return
 
     menu_path = user.menu_path.split('/')[:-1]
+    print(menu_path)
     user.menu_path = '/'.join(menu_path)
     if menu_path[-1] == '_settings':
         response = _send_message(bot_token, 'sendMessage', {
