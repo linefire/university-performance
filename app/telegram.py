@@ -131,14 +131,14 @@ def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
             'text': 'Настройки',
             'reply_markup': _get_settings_reply_markup(),
         })
-    elif menu_path[-1] == '_menus':
+    elif len(menu_path) and menu_path[-1] == '_menus':
         desc, repl = _get_menu_settings_reply_markup(bot_token)
         response = _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': desc,
             'reply_markup': repl,
         })
-    elif menu_path[-2] == '_menus':
+    elif len(menu_path) > 1 and menu_path[-2] == '_menus':
         desc, repl = _get_edit_menu_reply_markup(bot_token, menu_path[-1])
         response = _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
