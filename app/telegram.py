@@ -276,7 +276,7 @@ def add_menu(bot_token: str, chat_id: int, user_id: int, text: str):
     name = text[:text.index(';')].strip()
     desc = text[text.index(';') + 1:].strip()
 
-    if search(r'[^a-zA-Z]', text):
+    if search(r'[^a-zA-Z]', name):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'имя должно быть написано латинскими буквами.',
