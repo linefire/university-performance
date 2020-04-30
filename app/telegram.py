@@ -72,10 +72,14 @@ def set_up_webhooks():
 
 
 def _get_reply_markup(bot_token: str, menu_path: str,
-                      is_admin: bool = False) -> (str, dict):
+                      is_admin: bool = False) -> (str, str):
     menu_name = menu_path.split('/')[-1]
 
     menu = Menu.get_menu(bot_token, menu_name)
+    if menu_path == '_start_menu':
+        desc = 'Главное меню'
+    else:
+        desc = menu.description
 
     keyboard = []
     for button in menu.buttons:
@@ -89,10 +93,10 @@ def _get_reply_markup(bot_token: str, menu_path: str,
 
     data = {
         'resize_keyboard': True,
-        'keyboard': dumps(keyboard)
+        'keyboard': keyboard,
     }
 
-    return menu.description, data
+    return desc, dumps(data)
 
 
 def send_start_message(bot_token: str, chat_id: int, user_id: int):
@@ -147,15 +151,15 @@ def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
         db.session.rollback()
 
 
-def _get_settings_reply_markup() -> dict:
-    return {
+def _get_settings_reply_markup() -> str:
+    return dumps({
         'resize_keyboard': True,
-        'keyboard': dumps([
+        'keyboard': [
             [{'text': 'Настройки меню'}],
             [{'text': 'Настройки действий'}],
             [{'text': 'Назад'}],
-        ])
-    }
+        ],
+    })
 
 
 def send_settings_menu(bot_token: str, chat_id: int, user_id: int):
@@ -175,7 +179,7 @@ def send_settings_menu(bot_token: str, chat_id: int, user_id: int):
 
 
 def _get_menu_settings_reply_markup(bot_pointer: Union[int, str]) -> (str,
-                                                                      dict):
+                                                                      str):
     menus = Menu.get_menus(bot_pointer)
 
     keyboard = []
@@ -185,10 +189,10 @@ def _get_menu_settings_reply_markup(bot_pointer: Union[int, str]) -> (str,
     keyboard.append([{'text': 'Добавить меню'}])
     keyboard.append([{'text': 'Назад'}])
 
-    return 'Настройки меню', {
+    return 'Настройки меню', dumps({
         'resize_keyboard': True,
-        'keyboard': dumps(keyboard),
-    }
+        'keyboard': keyboard,
+    })
 
 
 def send_menu_settings(bot_token: str, chat_id: int, user_id: int):
@@ -230,12 +234,12 @@ def send_add_menu_menu(bot_token: str, chat_id: int, user_id: int):
         'text': ('Добавьте меню -> имя;описание меню\n'
                  'имя должно содержать только латинские буквы,\n'
                  'имя и описание должны быть разделены точкой с запятой.'),
-        'reply_markup': {
+        'reply_markup': dumps({
             'resize_keyboard': True,
-            'keyboard': dumps([
+            'keyboard': [
                 [{'text': 'Назад'}],
-            ])
-        },
+            ],
+        }),
     })
 
     if response['ok']:
@@ -257,12 +261,12 @@ def add_menu(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'имя и описание должны быть разделены точкой с запятой.',
-            'reply_markup': {
+            'reply_markup': dumps({
                 'resize_keyboard': True,
-                'keyboard': dumps([
+                'keyboard': [
                     [{'text': 'Назад'}],
-                ])
-            },
+                ],
+            }),
         })
         return
 
@@ -273,12 +277,12 @@ def add_menu(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'имя должно быть написано латинскими буквами.',
-            'reply_markup': {
+            'reply_markup': dumps({
                 'resize_keyboard': True,
-                'keyboard': dumps([
+                'keyboard': [
                     [{'text': 'Назад'}],
-                ])
-            },
+                ],
+            }),
         })
         return
 
@@ -286,12 +290,12 @@ def add_menu(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'описание не может быть пустым.',
-            'reply_markup': {
+            'reply_markup': dumps({
                 'resize_keyboard': True,
-                'keyboard': dumps([
+                'keyboard': [
                     [{'text': 'Назад'}],
-                ])
-            },
+                ],
+            }),
         })
         return
 
@@ -306,7 +310,7 @@ def add_menu(bot_token: str, chat_id: int, user_id: int, text: str):
     send_previous_menu(bot_token, chat_id, user_id)
 
 
-def _get_edit_menu_reply_markup(bot_id: int, menu_name: str) -> (str, dict):
+def _get_edit_menu_reply_markup(bot_id: int, menu_name: str) -> (str, str):
     menu = Menu.get_menu(bot_id, menu_name)
 
     keyboard = []
@@ -317,10 +321,10 @@ def _get_edit_menu_reply_markup(bot_id: int, menu_name: str) -> (str, dict):
     keyboard.append([{'text': 'Изменить порядок кнопок'}])
     keyboard.append([{'text': 'Назад'}])
 
-    return f'Настройки {menu_name} меню', {
+    return f'Настройки {menu_name} меню', dumps({
         'resize_keyboard': True,
-        'keyboard': dumps(keyboard),
-    }
+        'keyboard': keyboard,
+    })
 
 
 def send_edit_menu(bot_token: str, chat_id: int, user_id: int, text: str):
@@ -383,12 +387,12 @@ def send_add_button_menu(bot_token: str, chat_id: int, user_id: int):
     response = _send_message(bot_token, 'sendMessage', {
         'chat_id': chat_id,
         'text': text,
-        'reply_markup': {
+        'reply_markup': dumps({
             'resize_keyboard': True,
-            'keyboard': dumps([
+            'keyboard': [
                 [{'text': 'Назад'}],
-            ])
-        }
+            ],
+        }),
     })
 
     if response['ok']:
@@ -412,12 +416,12 @@ def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'Неправильно расставлены ";"',
-            'reply_markup': {
+            'reply_markup': dumps({
                 'resize_keyboard': True,
-                'keyboard': dumps([
+                'keyboard': [
                     [{'text': 'Назад'}],
-                ])
-            }
+                ],
+            }),
         })
         return
 
@@ -425,12 +429,12 @@ def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'Текст кнопки пустой',
-            'reply_markup': {
+            'reply_markup': dumps({
                 'resize_keyboard': True,
-                'keyboard': dumps([
+                'keyboard': [
                     [{'text': 'Назад'}],
-                ])
-            }
+                ],
+            }),
         })
         return
 
@@ -438,12 +442,12 @@ def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'Неправильно выбран тип действия используйте "a" или "m"',
-            'reply_markup': {
+            'reply_markup': dumps({
                 'resize_keyboard': True,
-                'keyboard': dumps([
+                'keyboard': [
                     [{'text': 'Назад'}],
-                ])
-            }
+                ],
+            }),
         })
         return
 
@@ -461,12 +465,12 @@ def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
             _send_message(bot_token, 'sendMessage', {
                 'chat_id': chat_id,
                 'text': f'Меню {type_name} не существует',
-                'reply_markup': {
+                'reply_markup': dumps({
                     'resize_keyboard': True,
-                    'keyboard': dumps([
+                    'keyboard': [
                         [{'text': 'Назад'}],
-                    ])
-                }
+                    ],
+                }),
             })
             return
     else:
@@ -479,12 +483,12 @@ def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
             _send_message(bot_token, 'sendMessage', {
                 'chat_id': chat_id,
                 'text': f'Действия {type_name} не существует',
-                'reply_markup': {
+                'reply_markup': dumps({
                     'resize_keyboard': True,
-                    'keyboard': dumps([
+                    'keyboard': [
                         [{'text': 'Назад'}],
-                    ])
-                }
+                    ],
+                }),
             })
             return
 
@@ -501,26 +505,26 @@ def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
     _send_message(bot_token, 'sendMessage', {
         'chat_id': chat_id,
         'text': 'Кнопка добавлена',
-        'reply_markup': {
+        'reply_markup': dumps({
             'resize_keyboard': True,
-            'keyboard': dumps([
+            'keyboard': [
                 [{'text': 'Назад'}],
-            ])
-        }
+            ],
+        }),
     })
 
     send_previous_menu(bot_token, chat_id, user_id)
 
 
-def _get_actions_settings_menu_reply_markup():
-    return 'Настройки действий', {
+def _get_actions_settings_menu_reply_markup() -> (str, str):
+    return 'Настройки действий', dumps({
         'resize_keyboard': True,
-        'keyboard': dumps([
+        'keyboard': [
             [{'text': 'Добавить действие'}],
             [{'text': 'Удалить действие'}],
             [{'text': 'Назад'}],
-        ])
-    }
+        ],
+    })
 
 
 def send_actions_settings_menu(bot_token: str, chat_id: int, user_id: int):
@@ -561,12 +565,12 @@ def send_add_action(bot_token: str, chat_id: int, user_id: int):
     response = _send_message(bot_token, 'sendMessage', {
         'chat_id': chat_id,
         'text': 'Добавить действие\nназовите действие латинскими буквами',
-        'reply_markup': {
+        'reply_markup': dumps({
             'resize_keyboard': True,
-            'keyboard': dumps([
+            'keyboard': [
                 [{'text': 'Назад'}]
-            ])
-        },
+            ],
+        }),
     })
 
     if response['ok']:
@@ -600,12 +604,12 @@ def add_action(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'Название должно быть только латинскими буквами',
-            'reply_keyboard': {
+            'reply_keyboard': dumps({
                 'resize_keyboard': True,
-                'keyboard': dumps([
+                'keyboard': [
                     [{'text': 'Назад'}],
-                ]),
-            },
+                ],
+            }),
         })
 
 
@@ -626,12 +630,12 @@ def delete_action(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': f'Действия с названием {text} не существует',
-            'reply_keyboard': {
+            'reply_keyboard': dumps({
                 'resize_keyboard': True,
-                'keyboard': dumps([
+                'keyboard': [
                     [{'text': 'Назад'}],
-                ]),
-            },
+                ],
+            }),
         })
         return
 

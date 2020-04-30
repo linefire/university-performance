@@ -62,12 +62,10 @@ def start_admin(bot_token: str):
 
 def check_access_settings(bot_token: str, user_id: int) -> bool:
     bot = ChildBot.get_by_token(bot_token)
-    print(bot.admin, user_id)
     if bot.admin != user_id:
         return False
 
     user = User.get_user(bot.id, user_id)
-    print(user.menu_path)
     if user.menu_path != '_start_menu':
         return False
 
