@@ -1,13 +1,16 @@
+
 import time
 from json import dumps
 from os import environ
+from re import search
 from threading import Lock
-from typing import List, Dict, Tuple
+from typing import Union
 
-from flask import request
 from requests import post
 
 from app import db
+from app.model import Action
+from app.model import Button
 from app.model import ChildBot, Menu, User
 
 
@@ -56,111 +59,6 @@ def set_up_webhook(bot_token: str):
     _send_message(bot_token, 'setWebhook', {'url': hook_url})
 
 
-def _get_menu(bot_token: str,
-              user_id: int) -> Tuple[str, List[List[Dict[str, str]]]]:
-    reply_markup = []
-
-    bot = ChildBot.get_by_token(bot_token)
-
-    if not bot:
-        return '', reply_markup
-
-    user = User.get_user(bot.id, user_id)
-
-    if not user:
-        user = User()
-        user.tg_id = user_id,
-        user.bot_id = bot.id,
-
-        menu = Menu.get_menu(bot.id, 'start_menu')
-
-        if not menu:
-            menu = Menu()
-            menu.bot_id = bot.id
-            menu.name = 'start_menu'
-            menu.description = 'Главное меню'
-
-            db.session.add(menu)
-            db.session.flush()
-            db.session.refresh(menu)
-
-        user.menu = menu.name
-
-        db.session.add(user)
-        db.session.commit()
-
-    menu = Menu.get_menu(bot.id, user.menu.split('/')[-1])
-
-    for button in menu.buttons:
-        reply_markup.append([{'text': button.text}])
-
-    is_admin = bot.admin == user.tg_id
-
-    if is_admin:
-        reply_markup.append([{'text': 'Настройки'}])
-
-    return menu.description, reply_markup
-
-
-def send_message(bot_token: str, chat_id: int,
-                 text: str = None, user_id: int = None):
-    data = {'chat_id': chat_id}
-
-    if text is not None:
-        data['text'] = text
-
-    if user_id:
-        menu_desc, keyboard = _get_menu(bot_token, user_id)
-        if keyboard:
-            data['reply_markup'] = dumps({
-                'keyboard': keyboard,
-                'resize_keyboard': True,
-            })
-        if not data.get('text'):
-            data['text'] = menu_desc
-
-    print(data)
-
-    if data.get('text'):
-        _send_message(bot_token, 'sendMessage', data)
-
-
-def send_settings_menu(bot_token: str, chat_id: int):
-    data = {
-        'chat_id': chat_id,
-        'text': 'Ваши настройки',
-        'reply_markup': dumps({
-            'resize_keyboard': True,
-            'keyboard': [
-                [{'text': 'Редактор меню'}],
-                [{'text': 'Редактор действий'}],
-                [{'text': 'Назад'}],
-            ]
-        })
-    }
-
-    response = _send_message(bot_token, 'sendMessage', data)
-    print(response)
-    if response['ok']:
-        user = User.get_user(
-            bot_token,
-            request.json['message']['from']['id'],
-        )
-        user.menu += '/settings'
-        db.session.commit()
-
-
-def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
-    user = User.get_user(bot_token, user_id)
-
-    user_path = user.menu.split('/')
-    user.menu = '/'.join(user_path[:-1])
-    if user_path[-2] == 'start_menu':
-        send_message(bot_token, chat_id, user_id=user_id)
-    elif user_path[-2] == 'settings':
-        send_settings_menu(bot_token, chat_id)
-
-
 def check_bot_token(bot_token: str) -> bool:
     response = _send_message(bot_token, 'getMe')
     return response['ok']
@@ -171,3 +69,593 @@ def set_up_webhooks():
     child_bots.append(environ['TELEGRAM_TOKEN'])
     for child_bot in child_bots:
         set_up_webhook(child_bot)
+
+
+def _get_reply_markup(bot_token: str, menu_path: str,
+                      is_admin: bool = False) -> (str, dict):
+    menu_name = menu_path.split('/')[-1]
+
+    menu = Menu.get_menu(bot_token, menu_name)
+
+    keyboard = []
+    for button in menu.buttons:
+        keyboard.append([{'text': button.text}])
+
+    if menu_path == 'start_menu':
+        if is_admin:
+            keyboard.append([{'text': 'Настройки'}])
+    else:
+        keyboard.append([{'text': 'Назад'}])
+
+    data = {
+        'resize_keyboard': True,
+        'keyboard': dumps(keyboard)
+    }
+
+    return menu.description, data
+
+
+def send_start_message(bot_token: str, chat_id: int, user_id: int):
+    bot = ChildBot.get_by_token(bot_token)
+    user = User.get_user(bot.id, user_id)
+    user.menu_path = '_start_menu'
+
+    desc, reply = _get_reply_markup(bot_token, user.menu_path,
+                                    bot.admin == user.tg_id)
+    response = _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': desc,
+        'reply_markup': reply,
+    })
+
+    if response['ok']:
+        db.session.commit()
+    else:
+        db.session.rollback()
+
+
+def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
+    user = User.get_user(bot_token, user_id)
+    if '/' not in user.menu_path:
+        return
+
+    menu_path = user.menu_path.split('/')[:-1]
+    user.menu_path = '/'.join(menu_path)
+    if menu_path[-1] == '_settings':
+        response = _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Настройки',
+            'reply_markup': _get_settings_reply_markup(),
+        })
+    elif menu_path[-1] == 'menus':
+        response = _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Настройки меню',
+            'reply_markup': _get_menu_settings_reply_markup(bot_token),
+        })
+    else:
+        desc, reply = _get_reply_markup(bot_token, user.menu_path)
+        response = _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': desc,
+            'reply_markup': reply
+        })
+
+    if response['ok']:
+        db.session.commit()
+    else:
+        db.session.rollback()
+
+
+def _get_settings_reply_markup() -> dict:
+    return {
+        'resize_keyboard': True,
+        'keyboard': dumps([
+            [{'text': 'Настройки меню'}],
+            [{'text': 'Настройки действий'}],
+            [{'text': 'Назад'}],
+        ])
+    }
+
+
+def send_settings_menu(bot_token: str, chat_id: int, user_id: int):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if '/' in user.menu_path:
+        return
+
+    user.menu_path += '/settings'
+
+    response = _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': 'Настройки',
+        'reply_markup': _get_settings_reply_markup(),
+    })
+
+    if response['ok']:
+        db.session.commit()
+    else:
+        db.session.rollback()
+
+
+def _get_menu_settings_reply_markup(bot_pointer: Union[int, str]) -> (str,
+                                                                      dict):
+    menus = Menu.get_menus(bot_pointer)
+
+    keyboard = []
+    for menu in menus:
+        keyboard.append([{'text': f'Редактировать {menu.name} меню'}])
+
+    keyboard.append([{'text': 'Добавить меню'}])
+    keyboard.append([{'text': 'Назад'}])
+
+    return 'Настройки меню', {
+        'resize_keyboard': True,
+        'keyboard': dumps(keyboard),
+    }
+
+
+def send_menu_settings(bot_token: str, chat_id: int, user_id: int):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if not user.menu_path == 'start_menu/settings':
+        return
+
+    user.menu_path += '/menus'
+
+    response = _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': 'Настройки меню',
+        'reply_markup': _get_menu_settings_reply_markup(bot.id),
+    })
+
+    if response['ok']:
+        db.session.commit()
+    else:
+        db.session.rollback()
+
+
+def send_add_menu_menu(bot_token: str, chat_id: int, user_id: int):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if not user.menu_path == 'start_menu/settings/menus':
+        return
+
+    user.menu_path += '/add_menu'
+
+    response = _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': ('Добавьте меню -> имя;описание меню\n'
+                 'имя должно содержать только латинские буквы,\n'
+                 'имя и описание должны быть разделены точкой с запятой.'),
+        'reply_markup': {
+            'resize_keyboard': True,
+            'keyboard': dumps([
+                [{'text': 'Назад'}],
+            ])
+        },
+    })
+
+    if response['ok']:
+        db.session.commit()
+    else:
+        db.session.rollback()
+
+
+def add_menu(bot_token: str, chat_id: int, user_id: int, text: str):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if not user.menu_path == 'start_menu/settings/menus/add_menu':
+        return
+
+    if ';' not in text:
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': 'имя и описание должны быть разделены точкой с запятой.',
+            'reply_markup': {
+                'resize_keyboard': True,
+                'keyboard': dumps([
+                    [{'text': 'Назад'}],
+                ])
+            },
+        })
+        return
+
+    name = text[:text.index(';')].strip()
+    desc = text[text.index(';') + 1:].strip()
+
+    if search(r'[^a-zA-Z]'):
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': 'имя должно быть написано латинскими буквами.',
+            'reply_markup': {
+                'resize_keyboard': True,
+                'keyboard': dumps([
+                    [{'text': 'Назад'}],
+                ])
+            },
+        })
+        return
+
+    if not desc:
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': 'описание не может быть пустым.',
+            'reply_markup': {
+                'resize_keyboard': True,
+                'keyboard': dumps([
+                    [{'text': 'Назад'}],
+                ])
+            },
+        })
+        return
+
+    menu = Menu()
+    menu.name = name
+    menu.description = desc
+    menu.bot_id = bot.id
+
+    db.session.add(menu)
+    db.session.commit()
+
+    send_previous_menu(bot_token, chat_id, user_id)
+
+
+def _get_edit_menu_reply_markup(bot_id: int, menu_name: str) -> (str, dict):
+    menu = Menu.get_menu(bot_id, menu_name)
+
+    keyboard = []
+    for button in menu.buttons:
+        keyboard.append([{'text': button.text}])
+
+    keyboard.append([{'text': 'Добавить кнопку'}])
+    keyboard.append([{'text': 'Изменить порядок кнопок'}])
+    keyboard.append([{'text': 'Назад'}])
+
+    return f'Настройки {menu_name} меню', {
+        'resize_keyboard': True,
+        'keyboard': dumps(keyboard),
+    }
+
+
+def send_edit_menu(bot_token: str, chat_id: int, user_id: int, text: str):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if not user.menu_path == 'start_menu/settings/menus':
+        return
+
+    menu_name = text.split()[1]
+    user.menu_path += f'/{menu_name}'
+
+    desc, repl = _get_edit_menu_reply_markup(bot.id, menu_name)
+
+    response = _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': desc,
+        'reply_markup': repl,
+    })
+
+    if response['ok']:
+        db.session.commit()
+    else:
+        db.session.rollback()
+
+
+def send_add_button_menu(bot_token: str, chat_id: int, user_id: int):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if not user.menu_path.startswith('start_menu/settings/menus/'):
+        return
+
+    user.menu_path += '/add_button'
+
+    menus = Menu.get_menus(bot.id)
+    actions = Action.get_actions(bot.id)
+
+    text = ('Добавьте кнопку, напишите нам\n'
+            '"текст кнопки;тип действия;название действия"\n'
+            'тип действия должен быть a/m - действие/меню\n'
+            'название действия должно быть выбрано из списка ниже\n'
+            'Примеры:```\n'
+            'button text;a;action_name\n'
+            'button text;m;menu_name```\n')
+
+    text += 'Ваши меню:\n'
+    for menu in menus:
+        text += f'{menu.name}\n'
+
+    text += 'Ваши действия:\n'
+    for action in actions:
+        if action.order == 0:
+            text += f'{action.name}\n'
+
+    response = _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': text,
+        'reply_markup': {
+            'resize_keyboard': True,
+            'keyboard': dumps([
+                [{'text': 'Назад'}],
+            ])
+        }
+    })
+
+    if response['ok']:
+        db.session.commit()
+    else:
+        db.session.rollback()
+
+
+def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if not user.menu_path.startswith('start_menu/settings/menus/'):
+        return
+
+    try:
+        button_text, type_button, type_name = text.split(';')
+    except ValueError:
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Неправильно расставлены ";"',
+            'reply_markup': {
+                'resize_keyboard': True,
+                'keyboard': dumps([
+                    [{'text': 'Назад'}],
+                ])
+            }
+        })
+        return
+
+    if not button_text:
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Текст кнопки пустой',
+            'reply_markup': {
+                'resize_keyboard': True,
+                'keyboard': dumps([
+                    [{'text': 'Назад'}],
+                ])
+            }
+        })
+        return
+
+    if type_button not in ('a', 'm'):
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Неправильно выбран тип действия используйте "a" или "m"',
+            'reply_markup': {
+                'resize_keyboard': True,
+                'keyboard': dumps([
+                    [{'text': 'Назад'}],
+                ])
+            }
+        })
+        return
+
+    menu_name = user.menu_path.split('/')[-2]
+
+    menu = Menu.get_menu(menu_name)
+
+    if type_button == 'm':
+        menu2 = Menu.query.filter(
+            Menu.bot_id == bot.id,
+            Menu.name == type_name,
+        ).first()
+
+        if not menu2:
+            _send_message(bot_token, 'sendMessage', {
+                'chat_id': chat_id,
+                'text': f'Меню {type_name} не существует',
+                'reply_markup': {
+                    'resize_keyboard': True,
+                    'keyboard': dumps([
+                        [{'text': 'Назад'}],
+                    ])
+                }
+            })
+            return
+    else:
+        action = Action.query.filter(
+            Action.bot_id == bot.id,
+            Action.name == type_name,
+        ).first()
+
+        if not action:
+            _send_message(bot_token, 'sendMessage', {
+                'chat_id': chat_id,
+                'text': f'Действия {type_name} не существует',
+                'reply_markup': {
+                    'resize_keyboard': True,
+                    'keyboard': dumps([
+                        [{'text': 'Назад'}],
+                    ])
+                }
+            })
+            return
+
+    button = Button()
+    button.menu_id = menu.id
+    button.text = button_text
+    button.action_type = type_button
+    button.action_name = type_name
+
+    menu.buttons.append(button)
+
+    db.session.commit()
+
+    _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': 'Кнопка добавлена',
+        'reply_markup': {
+            'resize_keyboard': True,
+            'keyboard': dumps([
+                [{'text': 'Назад'}],
+            ])
+        }
+    })
+
+    send_previous_menu(bot_token, chat_id, user_id)
+
+
+def _get_actions_settings_menu_reply_markup():
+    return 'Настройки действий', {
+        'resize_keyboard': True,
+        'keyboard': dumps([
+            [{'text': 'Добавить действие'}],
+            [{'text': 'Удалить действие'}],
+            [{'text': 'Назад'}],
+        ])
+    }
+
+
+def send_actions_settings_menu(bot_token: str, chat_id: int, user_id: int):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if user.menu_path != '_start_menu/_settings':
+        return
+
+    user.menu_path += '/_actions'
+
+    desc, repl = _get_actions_settings_menu_reply_markup()
+    response = _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': desc,
+        'reply_markup': repl,
+    })
+
+    if response['ok']:
+        db.session.commit()
+    else:
+        db.session.rollback()
+
+
+def send_add_action(bot_token: str, chat_id: int, user_id: int):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if user.menu_path != '_start_menu/_settings/_actions':
+        return
+
+    user.menu_path += '/_add_action'
+
+    response = _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': 'Добавить действие\nназовите действие латинскими буквами',
+        'reply_markup': {
+            'resize_keyboard': True,
+            'keyboard': dumps([
+                [{'text': 'Назад'}]
+            ])
+        },
+    })
+
+    if response['ok']:
+        db.session.commit()
+    else:
+        db.session.rollback()
+
+
+def add_action(bot_token: str, chat_id: int, user_id: int, text: str):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if user.menu_path.startswith('_start_menu/_settings/_actions'):
+        return
+
+    text = text.strip()
+    if not search(r'[^a-zA-Z]', text):
+        action = Action()
+        action.name = user.menu_path.split('/')[-1]
+        action.text = text
+        action.order = len(Action.query.filter(Action.bot_id == bot.id,
+                                               Action.name == action.name,
+                                               ).all())
+        action.bot_id = bot.id
+
+        db.session.add(action)
+        db.session.commit()
+    else:
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Название должно быть только латинскими буквами',
+            'reply_keyboard': {
+                'resize_keyboard': True,
+                'keyboard': dumps([
+                    [{'text': 'Назад'}],
+                ]),
+            },
+        })
+
+
+def delete_action(bot_token: str, chat_id: int, user_id: int, text: str):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if user.menu_path != '_start_menu/_settings/_actions':
+        return
+
+    text = text.strip()
+    actions = Action.query.filter(Action.name == text,
+                                  Action.bot_id == bot.id).all()
+
+    if not actions:
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Действия с названием {text} не существует',
+            'reply_keyboard': {
+                'resize_keyboard': True,
+                'keyboard': dumps([
+                    [{'text': 'Назад'}],
+                ]),
+            },
+        })
+        return
+
+    for action in actions:
+        db.session.remove(action)
+
+    db.session.commit()
+
+
+def start_action(bot_token: str, chat_id: int, action_name: str):
+    actions = Action.query.filter(
+        Action.bot_id == ChildBot.get_by_token(bot_token).id,
+        Action.name == action_name,
+    ).order_by(Action.order).all()
+
+    for action in actions:
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': action.text,
+        })
