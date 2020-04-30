@@ -172,6 +172,36 @@ def _get_settings_reply_markup() -> str:
     })
 
 
+def button_click(bot_token: str, chat_id: int, user_id: int, text: str):
+    user = User.get_user(bot_token, user_id)
+    menu = Menu.query.filter(
+        Menu.bot_id == ChildBot.get_by_token(bot_token).id,
+        Menu.name == user.menu_path.split('/')[-1],
+    ).first()
+    if not menu:
+        return
+
+    button = Button.query.filter(
+        Button.menu_id == menu.id,
+        Button.text == text,
+    ).first()
+
+    if not button:
+        return
+
+    if button.action_type == 'm':
+        user.menu_path += f'/{button.action_name}'
+        desc, repl = _get_reply_markup(bot_token,
+                                       user.menu_path,
+                                       ChildBot.get_by_token(
+                                           bot_token).admin == user_id)
+        response = _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': desc,
+            'reply_markup': repl,
+        })
+
+
 def send_settings_menu(bot_token: str, chat_id: int, user_id: int):
     user = User.get_user(bot_token, user_id)
     user.menu_path += '/_settings'
