@@ -97,8 +97,8 @@ def webhook(bot_token: str):
             send_menu_settings(bot_token, chat_id, user_id)
         elif text == 'Добавить меню':
             send_add_menu_menu(bot_token, chat_id, user_id)
-        elif user.menu_path == '_start_menu/_settings/_menus/_add_menu':
-            add_menu(bot_token, chat_id, user_id, text)
         elif text == 'Назад':
             send_previous_menu(bot_token, chat_id, user_id)
+        elif user.menu_path == '_start_menu/_settings/_menus/_add_menu':
+            add_menu(bot_token, chat_id, user_id, text)
     return ''
