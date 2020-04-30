@@ -8,6 +8,7 @@ from app import app
 from app import db
 from app.model import ChildBot
 from app.model import User
+from app.telegram import send_menu_settings
 from app.telegram import send_message
 from app.telegram import check_bot_token
 from app.telegram import set_up_webhook
@@ -89,6 +90,8 @@ def webhook(bot_token: str):
         elif text == 'Настройки':
             if check_access_settings(bot_token, user_id):
                 send_settings_menu(bot_token, chat_id, user_id)
+        elif text == 'Настройки меню':
+            send_menu_settings(bot_token, chat_id, user_id)
         elif text == 'Назад':
             send_previous_menu(bot_token, chat_id, user_id)
     return ''
