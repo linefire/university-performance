@@ -131,7 +131,7 @@ def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
             'text': 'Настройки',
             'reply_markup': _get_settings_reply_markup(),
         })
-    elif menu_path[-1] == 'menus':
+    elif menu_path[-1] == '_menus':
         response = _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'Настройки меню',
@@ -166,7 +166,7 @@ def _get_settings_reply_markup() -> str:
 
 def send_settings_menu(bot_token: str, chat_id: int, user_id: int):
     user = User.get_user(bot_token, user_id)
-    user.menu_path += '/settings'
+    user.menu_path += '/_settings'
 
     response = _send_message(bot_token, 'sendMessage', {
         'chat_id': chat_id,
@@ -203,10 +203,10 @@ def send_menu_settings(bot_token: str, chat_id: int, user_id: int):
         return
 
     user = User.get_user(bot.id, user_id)
-    if not user.menu_path == 'start_menu/settings':
+    if not user.menu_path == '_start_menu/_settings':
         return
 
-    user.menu_path += '/menus'
+    user.menu_path += '/_menus'
 
     desc, repl = _get_menu_settings_reply_markup(bot.id)
     response = _send_message(bot_token, 'sendMessage', {
@@ -227,10 +227,10 @@ def send_add_menu_menu(bot_token: str, chat_id: int, user_id: int):
         return
 
     user = User.get_user(bot.id, user_id)
-    if not user.menu_path == 'start_menu/settings/menus':
+    if not user.menu_path == '_start_menu/_settings/_menus':
         return
 
-    user.menu_path += '/add_menu'
+    user.menu_path += '/_add_menu'
 
     response = _send_message(bot_token, 'sendMessage', {
         'chat_id': chat_id,
@@ -257,7 +257,7 @@ def add_menu(bot_token: str, chat_id: int, user_id: int, text: str):
         return
 
     user = User.get_user(bot.id, user_id)
-    if not user.menu_path == 'start_menu/settings/menus/add_menu':
+    if not user.menu_path == '_start_menu/_settings/_menus/_add_menu':
         return
 
     if ';' not in text:
@@ -336,7 +336,7 @@ def send_edit_menu(bot_token: str, chat_id: int, user_id: int, text: str):
         return
 
     user = User.get_user(bot.id, user_id)
-    if not user.menu_path == 'start_menu/settings/menus':
+    if not user.menu_path == '_start_menu/_settings/_menus':
         return
 
     menu_name = text.split()[1]
@@ -362,10 +362,10 @@ def send_add_button_menu(bot_token: str, chat_id: int, user_id: int):
         return
 
     user = User.get_user(bot.id, user_id)
-    if not user.menu_path.startswith('start_menu/settings/menus/'):
+    if not user.menu_path.startswith('_start_menu/_settings/_menus/'):
         return
 
-    user.menu_path += '/add_button'
+    user.menu_path += '/_add_button'
 
     menus = Menu.get_menus(bot.id)
     actions = Action.get_actions(bot.id)
@@ -410,7 +410,7 @@ def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
         return
 
     user = User.get_user(bot.id, user_id)
-    if not user.menu_path.startswith('start_menu/settings/menus/'):
+    if not user.menu_path.startswith('_start_menu/_settings/_menus/'):
         return
 
     try:
