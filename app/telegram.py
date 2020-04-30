@@ -124,7 +124,6 @@ def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
         return
 
     menu_path = user.menu_path.split('/')[:-1]
-    print(menu_path)
     user.menu_path = '/'.join(menu_path)
     if menu_path[-1] == '_settings':
         response = _send_message(bot_token, 'sendMessage', {
@@ -133,10 +132,11 @@ def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
             'reply_markup': _get_settings_reply_markup(),
         })
     elif menu_path[-1] == '_menus':
+        desc, repl = _get_menu_settings_reply_markup(bot_token)
         response = _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
-            'text': 'Настройки меню',
-            'reply_markup': _get_menu_settings_reply_markup(bot_token),
+            'text': desc,
+            'reply_markup': repl,
         })
     else:
         desc, reply = _get_reply_markup(bot_token, user.menu_path,
