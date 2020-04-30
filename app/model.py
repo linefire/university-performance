@@ -1,3 +1,4 @@
+from typing import List
 from typing import Optional
 from typing import Union
 
@@ -25,15 +26,24 @@ class User(db.Model):
     menu_path = db.Column(db.String)
 
     @classmethod
-    def get_user(cls, bot_pointer: Union[int, str],
-                 user_id: int) -> Optional['User']:
+    def get_user(cls, bot_pointer: Union[int, str], user_id: int) -> 'User':
         if isinstance(bot_pointer, str):
             bot_pointer = ChildBot.get_by_token(bot_pointer).id
 
-        return cls.query.filter(
+        user = cls.query.filter(
             cls.tg_id == user_id,
             cls.bot_id == bot_pointer,
         ).first()
+
+        if user is None:
+            user = User()
+            user.tg_id = user_id
+            user.bot_id = bot_pointer
+
+            db.session.add(user)
+            db.session.commit()
+
+        return user
 
 
 class Menu(db.Model):
@@ -42,15 +52,35 @@ class Menu(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     bot_id = db.Column(db.Integer, db.ForeignKey('child_bots.id'))
     name = db.Column(db.String)
-    description = db.Column(db.String)
+    description = db.Column(db.String, default='')
     buttons = db.relationship('Button', backref='menus')
 
     @classmethod
-    def get_menu(cls, bot_id: int, name: str) -> Optional['Menu']:
-        return cls.query.filter(
-            cls.bot_id == bot_id,
+    def get_menu(cls, bot_pointer: Union[int, str], name: str) -> 'Menu':
+        if isinstance(bot_pointer, str):
+            bot_pointer = ChildBot.get_by_token(bot_pointer).id
+
+        menu = cls.query.filter(
+            cls.bot_id == bot_pointer,
             cls.name == name,
         ).first()
+
+        if menu is None:
+            menu = Menu()
+            menu.bot_id = bot_pointer
+            menu.name = name
+
+            db.session.add(menu)
+            db.session.commit()
+
+        return menu
+
+    @classmethod
+    def get_menus(cls, bot_pointer: Union[int, str]) -> List['Menu']:
+        if isinstance(bot_pointer, str):
+            bot_pointer = ChildBot.get_by_token(bot_pointer).id
+
+        return cls.query.filter(cls.bot_id == bot_pointer).all()
 
 
 class Button(db.Model):
@@ -60,7 +90,7 @@ class Button(db.Model):
     menu_id = db.Column(db.Integer, db.ForeignKey('menus.id'))
     text = db.Column(db.String)
     action_type = db.Column(db.String)
-    action_id = db.Column(db.Integer)
+    action_name = db.Column(db.String)
 
 
 class Action(db.Model):
@@ -68,6 +98,13 @@ class Action(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     bot_id = db.Column(db.Integer, db.ForeignKey('child_bots.id'))
-    action_id = db.Column(db.String)
+    name = db.Column(db.String)
     order = db.Column(db.Integer)
     text = db.Column(db.String)
+
+    @classmethod
+    def get_actions(cls, bot_pointer: Union[int, str]) -> List['Action']:
+        if isinstance(bot_pointer, str):
+            bot_pointer = ChildBot.get_by_token(bot_pointer).id
+
+        return cls.query.filter(cls.bot_id == bot_pointer).all()
