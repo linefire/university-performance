@@ -8,6 +8,7 @@ from app import app
 from app import db
 from app.model import ChildBot
 from app.model import User
+from app.telegram import add_button
 from app.telegram import add_menu
 from app.telegram import send_add_button_menu
 from app.telegram import send_add_menu_menu
@@ -111,5 +112,8 @@ def webhook(bot_token: str):
         elif user.menu_path.startswith('_start_menu/_settings/_menus/') and \
                 text == 'Добавить кнопку':
             send_add_button_menu(bot_token, chat_id, user_id)
+        elif user.menu_path.startswith('_start_menu/_settings/_menus/') and \
+                user.menu_path.split('/')[-1] == 'add_button':
+            add_button(bot_token, chat_id, user_id, text)
 
     return ''
