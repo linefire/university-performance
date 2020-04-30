@@ -208,10 +208,11 @@ def send_menu_settings(bot_token: str, chat_id: int, user_id: int):
 
     user.menu_path += '/menus'
 
+    desc, repl = _get_menu_settings_reply_markup(bot.id)
     response = _send_message(bot_token, 'sendMessage', {
         'chat_id': chat_id,
-        'text': 'Настройки меню',
-        'reply_markup': _get_menu_settings_reply_markup(bot.id),
+        'text': desc,
+        'reply_markup': repl,
     })
 
     if response['ok']:
