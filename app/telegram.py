@@ -201,6 +201,11 @@ def button_click(bot_token: str, chat_id: int, user_id: int, text: str):
             'reply_markup': repl,
         })
 
+        if response['ok']:
+            db.session.commit()
+        else:
+            db.session.rollback()
+
 
 def send_settings_menu(bot_token: str, chat_id: int, user_id: int):
     user = User.get_user(bot_token, user_id)
