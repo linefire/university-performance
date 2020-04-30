@@ -138,6 +138,13 @@ def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
             'text': desc,
             'reply_markup': repl,
         })
+    elif menu_path[-2] == '_menus':
+        desc, repl = _get_edit_menu_reply_markup(bot_token, menu_path[-1])
+        response = _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': desc,
+            'reply_markup': repl,
+        })
     else:
         desc, reply = _get_reply_markup(bot_token, user.menu_path,
                                         ChildBot.get_by_token(
@@ -314,8 +321,9 @@ def add_menu(bot_token: str, chat_id: int, user_id: int, text: str):
     send_previous_menu(bot_token, chat_id, user_id)
 
 
-def _get_edit_menu_reply_markup(bot_id: int, menu_name: str) -> (str, str):
-    menu = Menu.get_menu(bot_id, menu_name)
+def _get_edit_menu_reply_markup(bot_pointer: Union[int, str],
+                                menu_name: str) -> (str, str):
+    menu = Menu.get_menu(bot_pointer, menu_name)
 
     keyboard = []
     for button in menu.buttons:
