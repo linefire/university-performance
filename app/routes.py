@@ -66,7 +66,7 @@ def check_access_settings(bot_token: str, user_id: int) -> bool:
         return False
 
     user = User.get_user(bot.id, user_id)
-    if user.menu != 'start_menu':
+    if user.menu_path != '_start_menu':
         return False
 
     return True
