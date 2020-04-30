@@ -76,7 +76,7 @@ def _get_reply_markup(bot_token: str, menu_path: str,
     menu_name = menu_path.split('/')[-1]
 
     menu = Menu.get_menu(bot_token, menu_name)
-    if menu_path == '_start_menu':
+    if menu_name == '_start_menu':
         desc = 'Главное меню'
     else:
         desc = menu.description
@@ -178,7 +178,6 @@ def button_click(bot_token: str, chat_id: int, user_id: int, text: str):
         Menu.bot_id == ChildBot.get_by_token(bot_token).id,
         Menu.name == user.menu_path.split('/')[-1],
     ).first()
-    print(menu)
     if not menu:
         return
 
@@ -186,8 +185,6 @@ def button_click(bot_token: str, chat_id: int, user_id: int, text: str):
         Button.menu_id == menu.id,
         Button.text == text,
     ).first()
-    print(user)
-    print(button)
     if not button:
         return
 
