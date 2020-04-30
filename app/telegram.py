@@ -465,7 +465,7 @@ def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
 
     menu_name = user.menu_path.split('/')[-2]
 
-    menu = Menu.get_menu(menu_name)
+    menu = Menu.get_menu(bot.id, menu_name)
 
     if type_button == 'm':
         menu2 = Menu.query.filter(
