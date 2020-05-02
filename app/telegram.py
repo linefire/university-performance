@@ -710,7 +710,7 @@ def add_new_action(bot_token: str, chat_id: int, user_id: int, text: str):
 
     db.session.add(action)
 
-    user.menu_path = user.menu_path.split('/')[:-1]
+    user.menu_path = '/'.join(user.menu_path.split('/')[:-1])
     send_edit_action_menu(bot_token, chat_id, user_id, name)
     db.session.commit()
 
@@ -722,7 +722,7 @@ def send_edit_action_menu(bot_token: str, chat_id: int,
         return
 
     user = User.get_user(bot.id, user_id)
-    if user.menu_path.startswith('_start_menu/_settings/_actions'):
+    if user.menu_path != '_start_menu/_settings/_actions':
         return
 
     action = Action.query.filter(
