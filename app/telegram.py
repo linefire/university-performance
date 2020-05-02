@@ -146,6 +146,14 @@ def send_previous_menu(bot_token: str, chat_id: int, user_id: int):
             'text': desc,
             'reply_markup': repl,
         })
+    elif len(menu_path) and menu_path[-1] == '_actions':
+        desc, reply = _get_actions_settings_menu_reply_markup(
+            ChildBot.get_by_token(bot_token).id)
+        response = _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': desc,
+            'reply_markup': reply,
+        })
     else:
         desc, reply = _get_reply_markup(bot_token, user.menu_path,
                                         ChildBot.get_by_token(
