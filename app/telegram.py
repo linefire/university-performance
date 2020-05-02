@@ -662,9 +662,12 @@ def add_new_action(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'Название должно быть написано латинскими буквами',
-            'reply_markup': dumps([
-                [{'text': 'Назад'}],
-            ]),
+            'reply_markup': dumps({
+                'resize_keyboard': True,
+                'keyboard': [
+                    [{'text': 'Назад'}]
+                ],
+            }),
         })
         return
 
@@ -672,9 +675,12 @@ def add_new_action(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': 'Описание не может быть пустым',
-            'reply_markup': dumps([
-                [{'text': 'Назад'}],
-            ]),
+            'reply_markup': dumps({
+                'resize_keyboard': True,
+                'keyboard': [
+                    [{'text': 'Назад'}]
+                ],
+            }),
         })
         return
 
@@ -687,9 +693,12 @@ def add_new_action(bot_token: str, chat_id: int, user_id: int, text: str):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
             'text': f'Действие {name} уже существует',
-            'reply_markup': dumps([
-                [{'text': 'Назад'}],
-            ]),
+            'reply_markup': dumps({
+                'resize_keyboard': True,
+                'keyboard': [
+                    [{'text': 'Назад'}]
+                ],
+            }),
         })
         return
 
