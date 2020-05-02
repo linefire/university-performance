@@ -575,8 +575,8 @@ def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
 
 def _get_actions_settings_menu_reply_markup(bot_id: int) -> (str, str):
     keyboard = []
-    buttons = Action.query(
-        Action.name.distinct()).filter(Action.bot_id == bot_id).all()
+    buttons = Action.query(Action.name).distinct().filter(
+        Action.bot_id == bot_id).all()
 
     for button in buttons:
         keyboard.append([{'text': button.name}])
