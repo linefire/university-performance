@@ -759,7 +759,7 @@ def add_subaction(bot_token: str, chat_id: int, user_id: int, text: str):
         return
 
     user = User.get_user(bot.id, user_id)
-    if user.menu_path.startswith('_start_menu/_settings/_actions/'):
+    if not user.menu_path.startswith('_start_menu/_settings/_actions/'):
         return
 
     text = text.strip()
