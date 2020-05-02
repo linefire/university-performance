@@ -765,6 +765,7 @@ def add_subaction(bot_token: str, chat_id: int, user_id: int, text: str):
     text = text.strip()
     if not text:
         return
+
     action = Action()
     action.name = user.menu_path.split('/')[-1]
     action.text = text
@@ -774,6 +775,17 @@ def add_subaction(bot_token: str, chat_id: int, user_id: int, text: str):
 
     db.session.add(action)
     db.session.commit()
+
+    _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': 'Действие записано',
+        'reply_markup': dumps({
+            'resize_keyboard': True,
+            'keyboard': [
+                [{'text': 'Назад'}]
+            ],
+        }),
+    })
 
 
 def delete_action(bot_token: str, chat_id: int, user_id: int, text: str):
