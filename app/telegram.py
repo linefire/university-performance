@@ -739,10 +739,18 @@ def send_edit_action_menu(bot_token: str, chat_id: int,
         'chat_id': chat_id,
         'text': ('Напишите какие сообщения буду посылаться клиенту '
                  'при вызове действия, мы уже записываем.'),
-        'reply_markup': dumps([
-            [{'text': 'Назад'}],
-        ]),
+        'reply_markup': dumps({
+            'resize_keyboard': True,
+            'keyboard': [
+                [{'text': 'Назад'}]
+            ],
+        }),
     })
+
+    if response['ok']:
+        db.session.commit()
+    else:
+        db.session.rollback()
 
 
 def add_subaction(bot_token: str, chat_id: int, user_id: int, text: str):
