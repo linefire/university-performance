@@ -127,7 +127,7 @@ def webhook(bot_token: str):
         elif user.menu_path == '_start_menu/_settings/_actions' and \
                 text == 'Добавить действие':
             send_add_action(bot_token, chat_id, user_id)
-        elif user.menu_path == '_start_menu/_settings/_add_action':
+        elif user.menu_path == '_start_menu/_settings/_actions/_add_action':
             add_new_action(bot_token, chat_id, user_id, text)
         elif user.menu_path == '_start_menu/_settings/_actions':
             send_edit_action_menu(bot_token, chat_id, user_id, text)
