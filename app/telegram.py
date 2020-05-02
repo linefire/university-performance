@@ -1,4 +1,3 @@
-
 import time
 from json import dumps
 from os import environ
@@ -34,7 +33,9 @@ def _limit_calls_per_second(count: int):
             finally:
                 last_time_called = time.perf_counter()
                 lock.release()
+
         return limited_func
+
     return decorate
 
 
@@ -204,6 +205,8 @@ def button_click(bot_token: str, chat_id: int, user_id: int, text: str):
             db.session.commit()
         else:
             db.session.rollback()
+    elif button.action_type == 'a':
+        start_action(bot_token, chat_id, button.action_name)
 
 
 def send_settings_menu(bot_token: str, chat_id: int, user_id: int):
@@ -562,14 +565,23 @@ def add_button(bot_token: str, chat_id: int, user_id: int, text: str):
     send_previous_menu(bot_token, chat_id, user_id)
 
 
-def _get_actions_settings_menu_reply_markup() -> (str, str):
+def _get_actions_settings_menu_reply_markup(bot_id: int) -> (str, str):
+    keyboard = []
+    buttons = Action.query(
+        Action.name.distinct()).filter(Action.bot_id == bot_id).all()
+
+    for button in buttons:
+        keyboard.append([{'text': button.name}])
+
+    keyboard.extend([
+        [{'text': 'Добавить действие'}],
+        [{'text': 'Удалить действие'}],
+        [{'text': 'Назад'}],
+    ])
+
     return 'Настройки действий', dumps({
         'resize_keyboard': True,
-        'keyboard': [
-            [{'text': 'Добавить действие'}],
-            [{'text': 'Удалить действие'}],
-            [{'text': 'Назад'}],
-        ],
+        'keyboard': keyboard,
     })
 
 
@@ -584,7 +596,7 @@ def send_actions_settings_menu(bot_token: str, chat_id: int, user_id: int):
 
     user.menu_path += '/_actions'
 
-    desc, repl = _get_actions_settings_menu_reply_markup()
+    desc, repl = _get_actions_settings_menu_reply_markup(bot.id)
     response = _send_message(bot_token, 'sendMessage', {
         'chat_id': chat_id,
         'text': desc,
@@ -610,7 +622,9 @@ def send_add_action(bot_token: str, chat_id: int, user_id: int):
 
     response = _send_message(bot_token, 'sendMessage', {
         'chat_id': chat_id,
-        'text': 'Добавить действие\nназовите действие латинскими буквами',
+        'text': ('Добавить действие\n'
+                 'назовите действие латинскими буквами и описание\n'
+                 'Пример: название действия;описание'),
         'reply_markup': dumps({
             'resize_keyboard': True,
             'keyboard': [
@@ -625,7 +639,7 @@ def send_add_action(bot_token: str, chat_id: int, user_id: int):
         db.session.rollback()
 
 
-def add_action(bot_token: str, chat_id: int, user_id: int, text: str):
+def add_new_action(bot_token: str, chat_id: int, user_id: int, text: str):
     bot = ChildBot.get_by_token(bot_token)
     if bot.admin != user_id:
         return
@@ -634,29 +648,107 @@ def add_action(bot_token: str, chat_id: int, user_id: int, text: str):
     if user.menu_path.startswith('_start_menu/_settings/_actions'):
         return
 
-    text = text.strip()
-    if not search(r'[^a-zA-Z]', text):
-        action = Action()
-        action.name = user.menu_path.split('/')[-1]
-        action.text = text
-        action.order = len(Action.query.filter(Action.bot_id == bot.id,
-                                               Action.name == action.name,
-                                               ).all())
-        action.bot_id = bot.id
-
-        db.session.add(action)
-        db.session.commit()
-    else:
+    name = text[:text.index(';')].strip()
+    desc = text[text.index(';') + 1:].strip()
+    if search(r'[^a-zA-Z]', name):
         _send_message(bot_token, 'sendMessage', {
             'chat_id': chat_id,
-            'text': 'Название должно быть только латинскими буквами',
-            'reply_keyboard': dumps({
-                'resize_keyboard': True,
-                'keyboard': [
-                    [{'text': 'Назад'}],
-                ],
-            }),
+            'text': 'Название должно быть написано латинскими буквами',
+            'reply_markup': dumps([
+                [{'text': 'Назад'}],
+            ]),
         })
+        return
+
+    if not desc:
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Описание не может быть пустым',
+            'reply_markup': dumps([
+                [{'text': 'Назад'}],
+            ]),
+        })
+        return
+
+    action = Action.query.filter(
+        Action.bot_id == bot.id,
+        Action.name == name,
+    ).first()
+
+    if action:
+        _send_message(bot_token, 'sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Действие {name} уже существует',
+            'reply_markup': dumps([
+                [{'text': 'Назад'}],
+            ]),
+        })
+        return
+
+    action = Action()
+    action.bot_id = bot.id
+    action.name = name
+    action.order = 0
+    action.text = desc
+
+    db.session.add(action)
+
+    user.menu_path = user.menu_path.split('/')[:-1]
+    send_edit_action_menu(bot_token, chat_id, user_id, name)
+    db.session.commit()
+
+
+def send_edit_action_menu(bot_token: str, chat_id: int,
+                          user_id: int, text: str):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if user.menu_path.startswith('_start_menu/_settings/_actions'):
+        return
+
+    action = Action.query.filter(
+        Action.bot_id == bot.id,
+        Action.name == text,
+    ).first()
+
+    if not action:
+        return
+
+    user.menu_path += f'/{text}'
+
+    response = _send_message(bot_token, 'sendMessage', {
+        'chat_id': chat_id,
+        'text': ('Напишите какие сообщения буду посылаться клиенту '
+                 'при вызове действия, мы уже записываем.'),
+        'reply_markup': dumps([
+            [{'text': 'Назад'}],
+        ]),
+    })
+
+
+def add_subaction(bot_token: str, chat_id: int, user_id: int, text: str):
+    bot = ChildBot.get_by_token(bot_token)
+    if bot.admin != user_id:
+        return
+
+    user = User.get_user(bot.id, user_id)
+    if user.menu_path.startswith('_start_menu/_settings/_actions/'):
+        return
+
+    text = text.strip()
+    if not text:
+        return
+    action = Action()
+    action.name = user.menu_path.split('/')[-1]
+    action.text = text
+    action.order = len(Action.query.filter(Action.bot_id == bot.id,
+                                           Action.name == action.name).all())
+    action.bot_id = bot.id
+
+    db.session.add(action)
+    db.session.commit()
 
 
 def delete_action(bot_token: str, chat_id: int, user_id: int, text: str):

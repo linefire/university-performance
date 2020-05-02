@@ -10,10 +10,14 @@ from app.model import ChildBot
 from app.model import User
 from app.telegram import add_button
 from app.telegram import add_menu
+from app.telegram import add_new_action
+from app.telegram import add_subaction
 from app.telegram import button_click
 from app.telegram import send_actions_settings_menu
+from app.telegram import send_add_action
 from app.telegram import send_add_button_menu
 from app.telegram import send_add_menu_menu
+from app.telegram import send_edit_action_menu
 from app.telegram import send_edit_menu
 from app.telegram import send_menu_settings
 from app.telegram import send_message
@@ -120,6 +124,15 @@ def webhook(bot_token: str):
         elif user.menu_path == '_start_menu/_settings' and \
                 text == 'Настройки действий':
             send_actions_settings_menu(bot_token, chat_id, user_id)
+        elif user.menu_path == '_start_menu/_settings/_actions' and \
+                text == 'Добавить действие':
+            send_add_action(bot_token, chat_id, user_id)
+        elif user.menu_path == '_start_menu/_settings/_add_action':
+            add_new_action(bot_token, chat_id, user_id, text)
+        elif user.menu_path == '_start_menu/_settings/_actions':
+            send_edit_action_menu(bot_token, chat_id, user_id, text)
+        elif user.menu_path == '_start_menu/_settings/_actions/':
+            add_subaction(bot_token, chat_id, user_id, text)
         else:
             button_click(bot_token, chat_id, user_id, text)
     return ''
