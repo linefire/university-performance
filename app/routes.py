@@ -131,7 +131,7 @@ def webhook(bot_token: str):
             add_new_action(bot_token, chat_id, user_id, text)
         elif user.menu_path == '_start_menu/_settings/_actions':
             send_edit_action_menu(bot_token, chat_id, user_id, text)
-        elif user.menu_path == '_start_menu/_settings/_actions/':
+        elif user.menu_path.startswith('_start_menu/_settings/_actions/'):
             add_subaction(bot_token, chat_id, user_id, text)
         else:
             button_click(bot_token, chat_id, user_id, text)
