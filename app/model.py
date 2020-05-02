@@ -102,6 +102,9 @@ class Action(db.Model):
     order = db.Column(db.Integer)
     text = db.Column(db.String)
 
+    def __repr__(self):
+        return f'<Action {self.id}, {self.bot_id}, {self.name}, {self.order}, {self.text}'
+
     @classmethod
     def get_actions(cls, bot_pointer: Union[int, str]) -> List['Action']:
         if isinstance(bot_pointer, str):

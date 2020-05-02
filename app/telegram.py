@@ -809,6 +809,7 @@ def delete_action(bot_token: str, chat_id: int, user_id: int, text: str):
 
 
 def start_action(bot_token: str, chat_id: int, action_name: str):
+    print(Action.query.all())
     actions = Action.query.filter(
         Action.bot_id == ChildBot.get_by_token(bot_token).id,
         Action.name == action_name,
