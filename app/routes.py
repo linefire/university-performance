@@ -87,7 +87,10 @@ def check_access_settings(bot_token: str, user_id: int) -> bool:
 @app.route('/webhook/<bot_token>', methods=['POST'])
 def webhook(bot_token: str):
     print(request.json)
-    text = request.json['message']['text']
+    try:
+        text = request.json['message']['text']
+    except KeyError:
+        return ''
     chat_id = request.json['message']['chat']['id']
     user_id = request.json['message']['from']['id']
     if bot_token == environ['TELEGRAM_TOKEN']:
